@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SEM分词</title>
+    <link rel="stylesheet" type="text/css" href="../static/css/bootstrap.css">
+
+</head>
+<body>
+
+
+<div class="container-fluid ">
+
+<div class="row">
+ <div class="col-xs-3 col-md-4" >
+     <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <div
+                        style="position: relative;display: inline-block;height: 50px;min-width: 300px;overflow: hidden;">
+                    <div style="position: absolute;top: 0;left: 0;right: 0;bottom: 0;z-index: 1000;border: 1px dotted #9d9d9d;color: #9d9d9d;line-height: 50px;padding-left: 15px;">
+                        <i class="fa fa-cloud-upload" aria-hidden="true"></i>
+                        <span>点击上传Excel文件</span>
+                    </div>
+                    <input name="excelFile" type="file" id="excelFile"
+                           style="position: absolute;top: 0;left: 0;right: 0;bottom: 0;background-color: #333333;z-index: 1001;opacity: 0;filter:alpha(opacity=0);">
+                </div>
+                <p class="help-block">注意：批量导入的Excel需使用规定格式模板. <a href="">下载模板</a></p>
+            </div>
+            <button type="submit" class="btn btn-primary">上传</button>
+
+
+
+
+            {% if status %}
+                <span style="color: green;">{{ msg }}</span>
+            {% else %}
+                <span style="color: red;">{{ msg }}</span>
+            {% endif %}
+        </form>
+
+</div>
+  <div class="col-xs-3 col-md-4" id="split_list">
+
+
+
+ {% csrf_token %}
+         <button class="btn btn-default" type="submit" id="add_button">添加规则</button>
+
+         <button class="btn btn-default" type="submit" id="input_button">提交规则</button>
+
+
+          <div class="form-group">
+			<button class="btn btn-default remove_button" type="submit" class="remove_button">删除当前规则</button>
+            <label for="Matching_rule">匹配规则</label>
+            <input type="text" class="form-control Matching_rules" id="Matching_rule" placeholder="Rule">
+          </div>
+
+</div>
+
+</div>
+
+
+<div class="row all_rule">
+
+        <div class="col-xs-2 col-md-2 noremove">
+    <table class="table table-hover table-bordered">
+     <thead>
+    <tr>
+        {% if len_word %}
+            <td>全部词汇{{ len_word }}</td>
+        {% else %}
+            <td>全部词汇</td>
+        {% endif %}
+    </tr>
+
+    </thead>
+      <tbody>
+
+           {% for word in word_list %}
+               <tr>
+        <td>{{ word }} </td>
+               </tr>
+          {% endfor %}
+      </tbody>
+
+    </table>
+    </div>
+
+</div>
+
+</div>
+
+
+
+
+
+
+</body>
+<script type="text/javascript" src='../static/js/jquery-3.3.1.js'></script>
+
+<script>
+$('window').ready(function(){
+    var body = $("body");
+    var FieldCount = 1;
+	$("#add_button").on('click',function(){
+	    FieldCount++;
+
+        $("#split_list").append(' <div class="form-group"><button class="btn btn-default remove_button" type="submit"  class="remove_button">删除当前规则</button> <label for="Matching_rules">匹配规则</label> <input type="text" class="form-control Matching_rules" id="field_'+ FieldCount +'" value="Rule '+ FieldCount +'" placeholder="rule"></div>');
+	});
+
+    $(body).on("click",".remove_button", function(e){ //user click on remove text
+            $(this).parent('div').remove(); //remove text box
+    });
+    $(body).on("click",".remove_button", function(e){ //user click on remove text
+            $(this).parent('div').remove(); //remove text box
+    });
+
+    $(function(){
+        $('#input_button').click(function(){
+
+            var left_speech = [];
+            var rules = [];
+            var  all_rule = $('.Matching_rules');
+
+            for (var i=0; i<all_rule.length;i++){
+                if(all_rule[i].value) {
+
+                    rules.push(all_rule[i].value);
+                }
+            }
+
+            $.ajax({
+					url:'/input_rule/',
+					type:'POST',
+                    {#contentType:'application/json',#}
+					data:{
+						'all_rule':rules,
+                        {#csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),#}
+					},
+					success:function(data){
+					    data = JSON.parse(data);
+						var handle_speech = data['handle_speech'];
+						var left_len = data['left_len'];
+						var left_word = data['left_word'];
+
+						remova_dom();
+                        left_word_fun(left_word);
+                        rule_word(handle_speech);
+					}
+				});
+            function remova_dom(){
+                $('.noremove~').remove();
+            }
+
+            function left_word_fun (data) {
+
+                $('.all_rule').append(' <div class="col-xs-1 col-md-1 " id="left_word_id"><table class="table table-hover table-bordered"><thead> </thead> <tbody>  </tbody> </table> </div> </div>');
+                var lens = data.length;
+                var left_word_id =  $('#left_word_id');
+                $('#left_word_id thead' ).append('<tr><td> 未分组词 '+ lens +'</td> </tr>');
+                for(var i =0 ;i< lens; i++ ){
+                    $('#left_word_id tbody' ).append('<tr><td> '+data[i]+'</td> </tr>')
+                    }
+
+            }
+
+            function rule_word(data) {
+                for (var word_i in data) {
+                    {#console.log(word_i);#}
+                    {#console.log(typeof word_i);#}
+                    $('.all_rule').append(' <div class="col-xs-1 col-md-1  id="word_rule_id"><table class="table table-hover table-bordered"><thead> </thead> <tbody>  </tbody> </table> </div> </div>');
+                    $('.all_rule div:last thead').append('<tr><td> '+  word_i+data[word_i].length+ '</td> </tr>');
+                    for (var s = 0; s < data[word_i].length; s++) {
+                        $('.all_rule div:last tbody').append('<tr><td> ' + data[word_i][s] + '</td> </tr>')
+                    }
+                }
+            }
+
+
+        })
+
+
+    })
+})
+
+
+
+
+
+
+</script>
+
+
+
+
+</html>
